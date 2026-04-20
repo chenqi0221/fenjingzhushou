@@ -500,18 +500,47 @@ export const ModelParamsControls = memo(({
                 </div>
               </section>
 
+              {/* 诊断信息显示 - 放在最上方 */}
+              <section className="mb-4 border border-yellow-400/30 rounded-lg p-3 bg-yellow-400/5">
+                <div className="mb-2 text-xs font-bold text-yellow-400">
+                  🔍 诊断信息（开发调试用）
+                </div>
+                <div className="text-xs text-white mb-1">
+                  <span className="text-gray-400">选中模型ID:</span> <span className="font-mono text-yellow-200">{selectedModel.id}</span>
+                </div>
+                <div className="text-xs text-white mb-1">
+                  <span className="text-gray-400">选中模型名:</span> {selectedModel.displayName}
+                </div>
+                <div className="text-xs text-white mb-2">
+                  <span className="text-gray-400">模型数量:</span> {providerModels.length}
+                </div>
+                <div className="space-y-1 border-t border-white/10 pt-2">
+                  {providerModels.map((m, i) => (
+                    <div key={m.id} className={`text-[10px] font-mono ${m.id === selectedModel.id ? 'text-yellow-400 font-bold' : 'text-gray-500'}`}>
+                      {m.id === selectedModel.id ? '✓' : ' '} [{i}] {m.displayName}
+                      <br/>
+                      <span className="pl-4 text-[9px] opacity-70">ID: {m.id}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
               <section>
                 <div className="mb-2 text-xs font-medium text-text-muted">
                   {t('modelParams.model')}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {providerModels.map((model) => {
+                  {providerModels.map((model, index) => {
                     const active = model.id === selectedModel.id;
                     return (
                       <button
-                        key={model.id}
+                        key={`model-btn-${index}-${model.id}`}
+                        data-model-index={index}
+                        data-model-id={model.id}
+                        data-model-name={model.displayName}
+                        data-is-active={active}
                         className={`inline-flex max-w-full items-center rounded-lg border text-xs leading-4 transition-colors ${modelOptionClassName} ${active
-                          ? 'border-accent/50 bg-accent/15 text-text-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+                          ? 'border-accent/50 bg-accent/15 text-text-dark shadow-[inset_0-1px_0_rgba(255,255,255,0.05)]'
                           : 'border-[rgba(255,255,255,0.12)] bg-bg-dark/65 text-text-muted hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)]'
                           }`}
                         onClick={(event) => {
