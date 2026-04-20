@@ -213,6 +213,7 @@ impl AIProvider for GoogleProvider {
         vec![
             "google/gemini-2.5-flash-image".to_string(),
             "google/gemini-3.1-flash-image".to_string(),
+            "google/gemini-3-pro-image-preview".to_string(),
             "google/imagen-4.0-generate-001".to_string(),
             "google/imagen-4.0-ultra-generate-001".to_string(),
             "google/imagen-4.0-fast-generate-001".to_string(),
@@ -420,13 +421,9 @@ impl AIProvider for GoogleProvider {
                 "parts": parts
             }));
 
-            let mut generation_config = serde_json::json!({
+            let generation_config = serde_json::json!({
                 "responseModalities": ["TEXT", "IMAGE"]
             });
-            
-            // 添加 aspect_ratio 参数到 generationConfig 中
-            generation_config["aspectRatio"] = request.aspect_ratio.clone().into();
-            info!("[Google AI] Added aspect_ratio to generationConfig: {}", request.aspect_ratio);
             
             let request_body = serde_json::json!({
                 "contents": contents,

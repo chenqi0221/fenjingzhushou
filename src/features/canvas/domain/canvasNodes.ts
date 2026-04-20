@@ -50,6 +50,8 @@ export interface NodeImageData extends NodeDisplayData {
 export interface UploadImageNodeData extends NodeImageData {
   sourceFileName?: string | null;
   model?: string;
+  analysisResult?: string;
+  imageAnalysisPrompt?: string;
 }
 
 export type ExportImageNodeResultKind =
@@ -148,6 +150,8 @@ export interface SmartStoryboardNodeData {
   resultText: string;
   model: string;
   isGenerating?: boolean;
+  smartStoryboardTextPrompt?: string;
+  smartStoryboardImagePrompt?: string;
   [key: string]: unknown;
 }
 
@@ -157,6 +161,8 @@ export interface ScriptMasterNodeData {
   model: string;
   duration: string;
   isGenerating?: boolean;
+  scriptMasterImageAnalysisPrompt?: string;
+  scriptMasterScriptPrompt?: string;
   [key: string]: unknown;
 }
 

@@ -106,6 +106,10 @@ export function SettingsDialog({
     autoCheckAppUpdateOnLaunch,
     enableUpdateDialog,
     imageAnalysisPrompt,
+    scriptMasterImageAnalysisPrompt,
+    scriptMasterScriptPrompt,
+    smartStoryboardTextPrompt,
+    smartStoryboardImagePrompt,
     setProviderApiKey,
     setGrsaiNanoBananaProModel,
     setDownloadPresetPaths,
@@ -128,6 +132,10 @@ export function SettingsDialog({
     setAutoCheckAppUpdateOnLaunch,
     setEnableUpdateDialog,
     setImageAnalysisPrompt,
+    setScriptMasterImageAnalysisPrompt,
+    setScriptMasterScriptPrompt,
+    setSmartStoryboardTextPrompt,
+    setSmartStoryboardImagePrompt,
   } = useSettingsStore();
   const providers = useMemo(() => {
     const providerOrder = ['google'];
@@ -181,6 +189,10 @@ export function SettingsDialog({
   );
   const [localEnableUpdateDialog, setLocalEnableUpdateDialog] = useState(enableUpdateDialog);
   const [localImageAnalysisPrompt, setLocalImageAnalysisPrompt] = useState(imageAnalysisPrompt);
+  const [localScriptMasterImageAnalysisPrompt, setLocalScriptMasterImageAnalysisPrompt] = useState(scriptMasterImageAnalysisPrompt);
+  const [localScriptMasterScriptPrompt, setLocalScriptMasterScriptPrompt] = useState(scriptMasterScriptPrompt);
+  const [localSmartStoryboardTextPrompt, setLocalSmartStoryboardTextPrompt] = useState(smartStoryboardTextPrompt);
+  const [localSmartStoryboardImagePrompt, setLocalSmartStoryboardImagePrompt] = useState(smartStoryboardImagePrompt);
   const [checkUpdateStatus, setCheckUpdateStatus] = useState<'' | 'checking' | 'no-update' | 'update-available' | 'error'>(
     ''
   );
@@ -283,6 +295,10 @@ export function SettingsDialog({
     setAutoCheckAppUpdateOnLaunch(localAutoCheckAppUpdateOnLaunch);
     setEnableUpdateDialog(localEnableUpdateDialog);
     setImageAnalysisPrompt(localImageAnalysisPrompt);
+    setScriptMasterImageAnalysisPrompt(localScriptMasterImageAnalysisPrompt);
+    setScriptMasterScriptPrompt(localScriptMasterScriptPrompt);
+    setSmartStoryboardTextPrompt(localSmartStoryboardTextPrompt);
+    setSmartStoryboardImagePrompt(localSmartStoryboardImagePrompt);
     onClose();
   }, [
     localApiKeys,
@@ -307,6 +323,10 @@ export function SettingsDialog({
     localAutoCheckAppUpdateOnLaunch,
     localEnableUpdateDialog,
     localImageAnalysisPrompt,
+    localScriptMasterImageAnalysisPrompt,
+    localScriptMasterScriptPrompt,
+    localSmartStoryboardTextPrompt,
+    localSmartStoryboardImagePrompt,
     providers,
     setProviderApiKey,
     setGrsaiNanoBananaProModel,
@@ -330,6 +350,10 @@ export function SettingsDialog({
     setAutoCheckAppUpdateOnLaunch,
     setEnableUpdateDialog,
     setImageAnalysisPrompt,
+    setScriptMasterImageAnalysisPrompt,
+    setScriptMasterScriptPrompt,
+    setSmartStoryboardTextPrompt,
+    setSmartStoryboardImagePrompt,
     onClose,
   ]);
 
@@ -500,6 +524,20 @@ export function SettingsDialog({
               `}
               >
                 <span className="text-sm">{t('settings.experimental')}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveCategory('prompts')}
+                className={`
+                w-full flex items-center gap-3 px-4 py-2.5 text-left
+                transition-colors
+                ${activeCategory === 'prompts'
+                    ? 'bg-accent/10 text-text-dark border-l-2 border-accent'
+                    : 'text-text-muted hover:bg-bg-dark hover:text-text-dark'
+                  }
+              `}
+              >
+                <span className="text-sm">{t('settings.prompts')}</span>
               </button>
 
               <button
@@ -1056,6 +1094,106 @@ export function SettingsDialog({
                   >
                     {t('common.save')}
                   </button>
+                </div>
+              </>
+            )}
+
+            {activeCategory === 'prompts' && (
+              <>
+                <div className="px-6 py-5 border-b border-border-dark">
+                  <h2 className="text-lg font-semibold text-text-dark">
+                    {t('settings.prompts')}
+                  </h2>
+                  <p className="text-sm text-text-muted mt-1">
+                    {t('settings.promptsDesc')}
+                  </p>
+                </div>
+
+                <div className="ui-scrollbar flex-1 space-y-4 overflow-y-auto p-6">
+                  <div className="rounded-lg border border-border-dark bg-bg-dark p-4">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-medium text-text-dark">
+                        {t('settings.imageAnalysisPrompt')}
+                      </h3>
+                      <p className="mt-1 text-xs text-text-muted">
+                        {t('settings.imageAnalysisPromptDesc')}
+                      </p>
+                    </div>
+                    <textarea
+                      value={localImageAnalysisPrompt}
+                      onChange={(event) => setLocalImageAnalysisPrompt(event.target.value)}
+                      className="w-full rounded border border-border-dark bg-surface-dark px-3 py-2 text-sm text-text-dark outline-none font-mono"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-border-dark bg-bg-dark p-4">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-medium text-text-dark">
+                        {t('settings.scriptMasterImageAnalysisPrompt')}
+                      </h3>
+                      <p className="mt-1 text-xs text-text-muted">
+                        {t('settings.scriptMasterImageAnalysisPromptDesc')}
+                      </p>
+                    </div>
+                    <textarea
+                      value={localScriptMasterImageAnalysisPrompt}
+                      onChange={(event) => setLocalScriptMasterImageAnalysisPrompt(event.target.value)}
+                      className="w-full rounded border border-border-dark bg-surface-dark px-3 py-2 text-sm text-text-dark outline-none font-mono"
+                      rows={8}
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-border-dark bg-bg-dark p-4">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-medium text-text-dark">
+                        {t('settings.scriptMasterScriptPrompt')}
+                      </h3>
+                      <p className="mt-1 text-xs text-text-muted">
+                        {t('settings.scriptMasterScriptPromptDesc')}
+                      </p>
+                    </div>
+                    <textarea
+                      value={localScriptMasterScriptPrompt}
+                      onChange={(event) => setLocalScriptMasterScriptPrompt(event.target.value)}
+                      className="w-full rounded border border-border-dark bg-surface-dark px-3 py-2 text-sm text-text-dark outline-none font-mono"
+                      rows={15}
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-border-dark bg-bg-dark p-4">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-medium text-text-dark">
+                        {t('settings.smartStoryboardTextPrompt')}
+                      </h3>
+                      <p className="mt-1 text-xs text-text-muted">
+                        {t('settings.smartStoryboardTextPromptDesc')}
+                      </p>
+                    </div>
+                    <textarea
+                      value={localSmartStoryboardTextPrompt}
+                      onChange={(event) => setLocalSmartStoryboardTextPrompt(event.target.value)}
+                      className="w-full rounded border border-border-dark bg-surface-dark px-3 py-2 text-sm text-text-dark outline-none font-mono"
+                      rows={15}
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-border-dark bg-bg-dark p-4">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-medium text-text-dark">
+                        {t('settings.smartStoryboardImagePrompt')}
+                      </h3>
+                      <p className="mt-1 text-xs text-text-muted">
+                        {t('settings.smartStoryboardImagePromptDesc')}
+                      </p>
+                    </div>
+                    <textarea
+                      value={localSmartStoryboardImagePrompt}
+                      onChange={(event) => setLocalSmartStoryboardImagePrompt(event.target.value)}
+                      className="w-full rounded border border-border-dark bg-surface-dark px-3 py-2 text-sm text-text-dark outline-none font-mono"
+                      rows={15}
+                    />
+                  </div>
                 </div>
               </>
             )}

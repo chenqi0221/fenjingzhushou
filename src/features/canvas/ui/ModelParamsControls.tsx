@@ -208,23 +208,11 @@ export const ModelParamsControls = memo(({
         return leftIndex - rightIndex;
       });
   }, [imageModels]);
-  const providerModels = useMemo(
-    () => imageModels.filter((model) => model.providerId === panelProviderId),
-    [imageModels, panelProviderId]
-  );
-  const modelGroups = useMemo(() => {
-    const grouped = new Map<string, ImageModelDefinition[]>();
-    providerModels.forEach((model) => {
-      const normalizedName = model.displayName.replace(/\s*\([^)]*\)\s*$/u, '').trim();
-      const key = normalizedName.length > 0 ? normalizedName : model.displayName;
-      const current = grouped.get(key) ?? [];
-      current.push(model);
-      grouped.set(key, current);
-    });
-    return Array.from(grouped.entries())
-      .map(([name, models]) => ({ name, models }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [providerModels]);
+  const providerModels = useMemo(() => {
+    return imageModels
+      .filter((model) => model.providerId === panelProviderId)
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [imageModels, panelProviderId]);
   const isCompactTrigger = triggerSize === 'sm';
   const modelIconClassName = isCompactTrigger ? 'h-3 w-3 shrink-0' : 'h-4 w-4 shrink-0';
   const paramsIconClassName = isCompactTrigger ? 'h-2.5 w-2.5 shrink-0' : 'h-4 w-4 shrink-0';
@@ -517,24 +505,22 @@ export const ModelParamsControls = memo(({
                   {t('modelParams.model')}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {modelGroups.map((group) => {
-                    const active = group.models.some((model) => model.id === selectedModel.id);
-                    const targetModel = group.models.find((model) => model.id === selectedModel.id)
-                      ?? group.models[0];
+                  {providerModels.map((model) => {
+                    const active = model.id === selectedModel.id;
                     return (
                       <button
-                        key={group.name}
+                        key={model.id}
                         className={`inline-flex max-w-full items-center rounded-lg border text-xs leading-4 transition-colors ${modelOptionClassName} ${active
                           ? 'border-accent/50 bg-accent/15 text-text-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
                           : 'border-[rgba(255,255,255,0.12)] bg-bg-dark/65 text-text-muted hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)]'
                           }`}
                         onClick={(event) => {
                           event.stopPropagation();
-                          onModelChange(targetModel.id);
+                          onModelChange(model.id);
                           setOpenPanel(null);
                         }}
                       >
-                        <span className="max-w-full break-words text-center">{group.name}</span>
+                        <span className="max-w-full break-words text-center">{model.displayName}</span>
                       </button>
                     );
                   })}

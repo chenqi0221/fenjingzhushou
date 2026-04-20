@@ -4,6 +4,7 @@ export type SettingsCategory =
   | 'appearance'
   | 'general'
   | 'experimental'
+  | 'prompts'
   | 'about';
 
 interface OpenSettingsEventDetail {

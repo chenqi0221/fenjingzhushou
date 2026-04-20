@@ -196,6 +196,8 @@
     "title": "设置",
     "providers": "密钥",
     "providersDesc": "配置 AI 服务商的 API 密钥",
+    "prompts": "提示词",
+    "promptsDesc": "管理各节点的 AI 提示词模板",
     "pricing": "价格",
     "pricingDesc": "管理节点价格展示、汇率换算和积分套餐估算。",
     "providerGuideText": "不同供应商在模型能力、队列速度、稳定性和价格上可能有差异。建议按当前任务场景切换供应商，并优先使用对应官方文档中的推荐参数。",
@@ -290,7 +292,17 @@
     "checkingUpdate": "正在检查更新...",
     "checkUpdateHasUpdate": "检测到新版本。",
     "checkUpdateUpToDate": "当前已是最新版本。",
-    "checkUpdateFailed": "检查更新失败，请稍后重试。"
+    "checkUpdateFailed": "检查更新失败，请稍后重试。",
+    "imageAnalysisPrompt": "图像分析提示词",
+    "imageAnalysisPromptDesc": "上传图片节点的图像分析提示词模板",
+    "scriptMasterImageAnalysisPrompt": "编剧大师图像分析提示词",
+    "scriptMasterImageAnalysisPromptDesc": "编剧大师节点的图像分析提示词模板",
+    "scriptMasterScriptPrompt": "编剧大师脚本提示词",
+    "scriptMasterScriptPromptDesc": "编剧大师节点的脚本生成提示词模板",
+    "smartStoryboardTextPrompt": "智能分镜文本提示词",
+    "smartStoryboardTextPromptDesc": "智能分镜节点的文本分镜提示词模板",
+    "smartStoryboardImagePrompt": "智能分镜图像提示词",
+    "smartStoryboardImagePromptDesc": "智能分镜节点的图像分镜提示词模板"
   },
   "pricing": {
     "nativePrice": "原币种：{{value}}",
