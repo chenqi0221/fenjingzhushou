@@ -101,7 +101,7 @@ impl GoogleProvider {
         prompt: &str,
     ) -> Result<String, AIError> {
         let endpoint = format!(
-            "{}/v1beta/models/{}:streamGenerateContent?alt=sse&key={}",
+            "{}/v1beta/models/{}:generateContent?key={}",
             BASE_URL, model, api_key
         );
         
@@ -132,7 +132,7 @@ impl GoogleProvider {
             ],
             "generationConfig": {
                 "temperature": 0.4,
-                "maxOutputTokens": 2048
+                "maxOutputTokens": 8192
             }
         });
 
@@ -211,6 +211,15 @@ impl AIProvider for GoogleProvider {
 
     fn list_models(&self) -> Vec<String> {
         vec![
+            "google/gemini-2.5-flash-image".to_string(),
+            "google/gemini-3.1-flash-image".to_string(),
+            "google/imagen-4.0-generate-001".to_string(),
+            "google/imagen-4.0-ultra-generate-001".to_string(),
+            "google/imagen-4.0-fast-generate-001".to_string(),
+            "google/gemini-2.5-flash-exp".to_string(),
+            "google/gemini-3.1-flash-lite-preview".to_string(),
+            "google/gemini-3.1-pro-preview".to_string(),
+            "google/gemini-2.5-flash".to_string(),
             "google/gemini-2.0-flash".to_string(),
             "google/gemini-1.5-flash".to_string(),
             "google/gemini-pro-vision".to_string(),
@@ -235,8 +244,249 @@ impl AIProvider for GoogleProvider {
         Err(AIError::Provider("Google AI does not support task polling".to_string()))
     }
 
-    async fn generate(&self, _request: GenerateRequest) -> Result<String, AIError> {
-        Err(AIError::Provider("Google AI image generation not yet implemented".to_string()))
+    async fn generate(&self, request: GenerateRequest) -> Result<String, AIError> {
+        info!(
+            "[Google AI] Generating image - model: {}, size: {}, aspect_ratio: {}, refs: {}",
+            request.model,
+            request.size,
+            request.aspect_ratio,
+            request.reference_images.as_ref().map(|r| r.len()).unwrap_or(0)
+        );
+
+        let api_key = self
+            .api_key
+            .read()
+            .await
+            .clone()
+            .ok_or_else(|| AIError::InvalidRequest("API key not set".to_string()))?;
+
+        info!(
+            "[Google AI] Generating image with model: {}, prompt: {}, refs: {}",
+            request.model,
+            request.prompt,
+            request.reference_images.as_ref().map(|r| r.len()).unwrap_or(0)
+        );
+
+        let model = request.model.split('/').nth(1).unwrap_or(&request.model);
+        
+        let is_imagen_model = model.starts_with("imagen-");
+        
+        let (width, height) = match request.size.as_str() {
+            "1024x1024" | "1:1" => (1024, 1024),
+            "768x1024" | "3:4" => (768, 1024),
+            "1024x768" | "4:3" => (1024, 768),
+            "1024x1792" | "9:16" => (1024, 1792),
+            "1792x1024" | "16:9" => (1792, 1024),
+            _ => (1024, 1024),
+        };
+        
+        if is_imagen_model {
+            let endpoint = format!(
+                "{}/v1beta/models/{}:predict?key={}",
+                BASE_URL, model, api_key
+            );
+
+            let sample_count = 1;
+
+            let mut request_body = serde_json::json!({
+                "instances": [
+                    {
+                        "prompt": request.prompt
+                    }
+                ],
+                "parameters": {
+                    "sampleCount": sample_count,
+                    "width": width,
+                    "height": height
+                }
+            });
+
+            if let Some(reference_images) = &request.reference_images {
+                if !reference_images.is_empty() {
+                    let image_url = &reference_images[0];
+                    let image_bytes = Self::source_to_bytes(image_url)
+                        .map_err(|err| AIError::Provider(err))?;
+
+                    if image_bytes.len() > 10 * 1024 * 1024 {
+                        return Err(AIError::Provider("Reference image too large, please upload a smaller image".to_string()));
+                    }
+
+                    let base64_image = STANDARD.encode(&image_bytes);
+
+                    if let Some(instance) = request_body.get_mut("instances").and_then(|v| v.as_array_mut()).and_then(|arr| arr.first_mut()) {
+                        instance["image"] = serde_json::json!({
+                            "mimeType": "image/jpeg",
+                            "data": base64_image
+                        });
+                    }
+                }
+            }
+
+            info!("[Google AI] Sending request to endpoint: {}", endpoint);
+
+            let response = self
+                .client
+                .post(&endpoint)
+                .header("Content-Type", "application/json")
+                .json(&request_body)
+                .send()
+                .await?;
+
+            let status = response.status();
+            let raw_response = response.text().await.unwrap_or_default();
+
+            info!("[Google AI] API response status: {}, body: {}", status, raw_response);
+
+            if !status.is_success() {
+                return Err(AIError::Provider(format!(
+                    "Google AI API failed {}: {}",
+                    status, raw_response
+                )));
+            }
+
+            let body: serde_json::Value = serde_json::from_str(&raw_response).map_err(|err| {
+                AIError::Provider(format!(
+                    "Google AI invalid JSON response: {}; raw={}",
+                    err,
+                    raw_response
+                ))
+            })?;
+
+            if let Some(predictions) = body.get("predictions").and_then(|v| v.as_array()) {
+                if let Some(first_prediction) = predictions.first() {
+                    if let Some(b64_data) = first_prediction.get("bytesBase64Encoded").and_then(|v| v.as_str()) {
+                        return Ok(format!("data:image/png;base64,{}", b64_data));
+                    }
+
+                    if let Some(b64_data) = first_prediction.get("binaryData").and_then(|v| v.as_str()) {
+                        return Ok(format!("data:image/png;base64,{}", b64_data));
+                    }
+
+                    if let Some(mime_type) = first_prediction.get("mimeType").and_then(|v| v.as_str()) {
+                        if mime_type.starts_with("image/") {
+                            if let Some(b64_data) = first_prediction.get("binaryData").and_then(|v| v.as_str()) {
+                                return Ok(format!("data:{};base64,{}", mime_type, b64_data));
+                            }
+                        }
+                    }
+
+                    if let Some(url) = first_prediction.get("url").and_then(|v| v.as_str()) {
+                        return Ok(url.to_string());
+                    }
+                }
+                return Err(AIError::Provider(format!("Google AI response missing image data in predictions: {:?}", body)));
+            } else if let Some(error) = body.get("error") {
+                let error_msg = error.to_string();
+                return Err(AIError::Provider(format!("Google AI API error: {}", error_msg)));
+            } else {
+                return Err(AIError::Provider(format!("Google AI response format not recognized: {:?}", body)));
+            }
+        } else {
+            let endpoint = format!(
+                "{}/v1beta/models/{}:generateContent?key={}",
+                BASE_URL, model, api_key
+            );
+
+            let mut contents: Vec<serde_json::Value> = Vec::new();
+            
+            let mut parts: Vec<serde_json::Value> = Vec::new();
+            
+            if let Some(reference_images) = &request.reference_images {
+                for image_url in reference_images {
+                    let image_bytes = Self::source_to_bytes(image_url)
+                        .map_err(|err| AIError::Provider(err))?;
+
+                    if image_bytes.len() > 10 * 1024 * 1024 {
+                        return Err(AIError::Provider("Reference image too large, please upload a smaller image".to_string()));
+                    }
+
+                    let base64_image = STANDARD.encode(&image_bytes);
+                    
+                    parts.push(serde_json::json!({
+                        "inlineData": {
+                            "mimeType": "image/jpeg",
+                            "data": base64_image
+                        }
+                    }));
+                }
+            }
+            
+            parts.push(serde_json::json!({
+                "text": request.prompt
+            }));
+
+            contents.push(serde_json::json!({
+                "role": "user",
+                "parts": parts
+            }));
+
+            let mut generation_config = serde_json::json!({
+                "responseModalities": ["TEXT", "IMAGE"]
+            });
+            
+            // 添加 aspect_ratio 参数到 generationConfig 中
+            generation_config["aspectRatio"] = request.aspect_ratio.clone().into();
+            info!("[Google AI] Added aspect_ratio to generationConfig: {}", request.aspect_ratio);
+            
+            let request_body = serde_json::json!({
+                "contents": contents,
+                "generationConfig": generation_config
+            });
+
+            info!("[Google AI] Sending Gemini generateContent request to endpoint: {}", endpoint);
+
+            let response = self
+                .client
+                .post(&endpoint)
+                .header("Content-Type", "application/json")
+                .json(&request_body)
+                .send()
+                .await?;
+
+            let status = response.status();
+            let raw_response = response.text().await.unwrap_or_default();
+
+            info!("[Google AI] Gemini API response status: {}, body: {}", status, raw_response);
+
+            if !status.is_success() {
+                return Err(AIError::Provider(format!(
+                    "Google AI API failed {}: {}",
+                    status, raw_response
+                )));
+            }
+
+            let body: serde_json::Value = serde_json::from_str(&raw_response).map_err(|err| {
+                AIError::Provider(format!(
+                    "Google AI invalid JSON response: {}; raw={}",
+                    err,
+                    raw_response
+                ))
+            })?;
+
+            if let Some(candidates) = body.get("candidates").and_then(|v| v.as_array()) {
+                if let Some(first_candidate) = candidates.first() {
+                    if let Some(content) = first_candidate.get("content").and_then(|v| v.get("parts")) {
+                        if let Some(parts) = content.as_array() {
+                            for part in parts {
+                                if let Some(inline_data) = part.get("inlineData") {
+                                    if let Some(mime_type) = inline_data.get("mimeType").and_then(|v| v.as_str()) {
+                                        if let Some(b64_data) = inline_data.get("data").and_then(|v| v.as_str()) {
+                                            return Ok(format!("data:{};base64,{}", mime_type, b64_data));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return Err(AIError::Provider(format!("Google AI response missing image data: {:?}", body)));
+            } else if let Some(error) = body.get("error") {
+                let error_msg = error.to_string();
+                return Err(AIError::Provider(format!("Google AI API error: {}", error_msg)));
+            } else {
+                return Err(AIError::Provider(format!("Google AI response format not recognized: {:?}", body)));
+            }
+        }
     }
 
     async fn analyze_image(&self, image_url: &str, model: &str, prompt: &str) -> Result<String, AIError> {
@@ -253,7 +503,95 @@ impl AIProvider for GoogleProvider {
         self.analyze_image_with_model(&api_key, image_url, model, prompt).await
     }
 
-    async fn chat(&self, _request: ChatRequest) -> Result<String, AIError> {
-        Err(AIError::Provider("Google AI chat completion not yet implemented".to_string()))
+    async fn chat(&self, request: ChatRequest) -> Result<String, AIError> {
+        let api_key = self.api_key.read().await;
+        let api_key = api_key.as_ref().ok_or_else(|| AIError::Provider("No API key set".to_string()))?;
+        
+        let model = &request.model;
+        let endpoint = format!(
+            "{}/v1beta/models/{}:generateContent?key={}",
+            BASE_URL, model, api_key
+        );
+        
+        // Google AI 不支持 system 角色，将 system 消息合并到第一个 user 消息中
+        let mut system_prompt = String::new();
+        let mut contents: Vec<serde_json::Value> = Vec::new();
+        
+        for msg in &request.messages {
+            if msg.role == "system" {
+                system_prompt = msg.content.clone();
+            } else {
+                let role = if msg.role == "assistant" { "model" } else { "user" };
+                contents.push(serde_json::json!({
+                    "role": role,
+                    "parts": [{"text": msg.content.clone()}]
+                }));
+            }
+        }
+        
+        // 如果有 system prompt，将其添加到第一个 user 消息的开头
+        if !system_prompt.is_empty() && !contents.is_empty() {
+            if let Some(first_msg) = contents.first_mut() {
+                if let Some(parts) = first_msg.get_mut("parts").and_then(|v| v.as_array_mut()) {
+                    if let Some(first_part) = parts.first_mut() {
+                        if let Some(text_obj) = first_part.get_mut("text") {
+                            if let Some(text) = text_obj.as_str().map(|s| s.to_string()) {
+                                let new_text = format!("{}\n\n{}", system_prompt, text);
+                                *text_obj = serde_json::json!(new_text);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        let request_body = serde_json::json!({
+            "contents": contents,
+            "generationConfig": {
+                "temperature": request.temperature,
+                "maxOutputTokens": request.max_tokens.unwrap_or(4096)
+            }
+        });
+        
+        let response = self
+            .client
+            .post(&endpoint)
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await?;
+        
+        let status = response.status();
+        let raw_response = response.text().await.unwrap_or_default();
+        
+        if !status.is_success() {
+            return Err(AIError::Provider(format!(
+                "Google AI API failed {}: {}",
+                status, raw_response
+            )));
+        }
+        
+        let body: serde_json::Value = serde_json::from_str(&raw_response).map_err(|err| {
+            AIError::Provider(format!(
+                "Google AI invalid JSON response: {}; raw={}",
+                err,
+                raw_response
+            ))
+        })?;
+        
+        if let Some(candidates) = body.get("candidates").and_then(|v| v.as_array()) {
+            if let Some(first_candidate) = candidates.first() {
+                if let Some(content) = first_candidate.get("content") {
+                    if let Some(parts) = content.get("parts").and_then(|v| v.as_array()) {
+                        let text: String = parts.iter()
+                            .filter_map(|part| part.get("text").and_then(|t| t.as_str()))
+                            .collect();
+                        return Ok(text);
+                    }
+                }
+            }
+        }
+        
+        Err(AIError::Provider("No response content from Google AI".to_string()))
     }
 }

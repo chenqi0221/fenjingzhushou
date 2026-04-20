@@ -555,8 +555,8 @@ pub async fn analyze_image(image_url: String, model: Option<String>, prompt: Opt
 
     let registry = get_registry();
 
-    let analysis_model_with_prefix = model.unwrap_or_else(|| "volcano/ep-20260410002744-29gfm".to_string());
-    let provider_id = analysis_model_with_prefix.split('/').next().unwrap_or("volcano").to_string();
+    let analysis_model_with_prefix = model.unwrap_or_else(|| "google/gemini-2.5-flash".to_string());
+    let provider_id = analysis_model_with_prefix.split('/').next().unwrap_or("google").to_string();
     
     let analysis_model = analysis_model_with_prefix.split('/').nth(1).unwrap_or(&analysis_model_with_prefix);
 
@@ -600,12 +600,8 @@ pub async fn chat_completion(
 
     let registry = get_registry();
 
-    let model_with_prefix = model.unwrap_or_else(|| "volcano/ep-20260410002744-29gfm".to_string());
-    let mut provider_id = model_with_prefix.split('/').next().unwrap_or("volcano").to_string();
-    
-    if provider_id == "volcano-vision" {
-        provider_id = "volcano".to_string();
-    }
+    let model_with_prefix = model.unwrap_or_else(|| "google/gemini-2.5-flash".to_string());
+    let provider_id = model_with_prefix.split('/').next().unwrap_or("google").to_string();
     
     let chat_model = model_with_prefix.split('/').nth(1).unwrap_or(&model_with_prefix);
 
@@ -636,4 +632,59 @@ pub async fn chat_completion(
     };
 
     provider.chat(request).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn test_google_models() -> Result<Vec<TestModelResult>, String> {
+    info!("Testing Google API models...");
+    
+    let registry = get_registry();
+    
+    let provider_arc = registry
+        .get_provider("google")
+        .ok_or_else(|| "Google provider not found".to_string())?;
+    
+    let models = vec![
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+    ];
+    
+    let mut results = Vec::new();
+    
+    for model in models {
+        let test_result = test_model_availability(provider_arc.as_ref(), model).await;
+        results.push(TestModelResult {
+            model: model.to_string(),
+            available: test_result.is_ok(),
+            error: test_result.err(),
+        });
+    }
+    
+    Ok(results)
+}
+
+async fn test_model_availability(provider: &(dyn crate::ai::AIProvider + Send + Sync), model: &str) -> Result<(), String> {
+    let request = crate::ai::ChatRequest {
+        model: model.to_string(),
+        messages: vec![crate::ai::ChatMessage {
+            role: "user".to_string(),
+            content: "Hi".to_string(),
+        }],
+        temperature: 0.7,
+        max_tokens: Some(10),
+        stream: false,
+    };
+    
+    provider.chat(request).await.map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[derive(Debug, Serialize)]
+pub struct TestModelResult {
+    pub model: String,
+    pub available: bool,
+    pub error: Option<String>,
 }

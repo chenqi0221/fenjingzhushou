@@ -126,6 +126,7 @@ pub fn run() {
             ai_commands::list_models,
             ai_commands::analyze_image,
             ai_commands::chat_completion,
+            ai_commands::test_google_models,
             project_state::list_project_summaries,
             project_state::get_project_record,
             project_state::upsert_project_record,
