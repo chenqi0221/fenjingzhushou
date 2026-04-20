@@ -7,6 +7,7 @@ import remarkBreaks from 'remark-breaks';
 import { getVersion } from '@tauri-apps/api/app';
 import { open } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { UiCheckbox, UiSelect } from '@/components/ui';
 import { UI_CONTENT_OVERLAY_INSET_CLASS, UI_DIALOG_TRANSITION_MS } from '@/components/ui/motion';
@@ -32,16 +33,10 @@ interface SettingsCheckboxCardProps {
 }
 
 const PROVIDER_REGISTER_URLS: Record<string, string> = {
-  ppio: 'https://ppio.com/user/register?invited_by=WGY0DZ',
-  volcano: 'https://www.volcengine.com/product/ark',
-  'volcano-vision': 'https://www.volcengine.com/product/ark',
   google: 'https://aistudio.google.com/app/apikey',
 };
 
 const PROVIDER_GET_KEY_URLS: Record<string, string> = {
-  ppio: 'https://ppio.com/settings/key-management',
-  volcano: 'https://console.volcengine.com/ark/management/apikey',
-  'volcano-vision': 'https://console.volcengine.com/ark/management/apikey',
   google: 'https://aistudio.google.com/app/apikey',
 };
 
@@ -135,7 +130,7 @@ export function SettingsDialog({
     setImageAnalysisPrompt,
   } = useSettingsStore();
   const providers = useMemo(() => {
-    const providerOrder = ['ppio', 'volcano', 'volcano-vision', 'google'];
+    const providerOrder = ['google'];
     const providerIndex = new Map(providerOrder.map((id, index) => [id, index]));
     return listModelProviders().slice().sort((left, right) => {
       const leftIndex = providerIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER;
@@ -597,7 +592,23 @@ export function SettingsDialog({
                                 }
                                 
                                 try {
+                                  // 先保存 API key 到后端
                                   await setApiKey(provider.id, apiKey);
+                                  
+                                  // 如果是 Google 提供商，测试可用模型
+                                  if (provider.id === 'google') {
+                                    const results = await invoke<Array<{model: string, available: boolean, error: string | null}>>('test_google_models');
+                                    const availableModels = results.filter(r => r.available).map(r => r.model);
+                                    const unavailableModels = results.filter(r => !r.available).map(r => r.model);
+                                    
+                                    if (availableModels.length > 0) {
+                                      alert(`✅ 可用的 Google 模型：\n${availableModels.join('\n')}\n\n❌ 不可用的模型：${unavailableModels.length > 0 ? unavailableModels.join(', ') : '无'}`);
+                                    } else {
+                                      alert('❌ 所有模型都不可用，请检查 API Key 是否正确');
+                                    }
+                                    return;
+                                  }
+                                  
                                   alert('API Key 连接测试成功！');
                                 } catch (error) {
                                   alert('API Key 连接测试失败，请检查密钥是否正确');

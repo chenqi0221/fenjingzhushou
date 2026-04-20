@@ -69,6 +69,7 @@ const uploadNodeDefinition: CanvasNodeDefinition<UploadImageNodeData> = {
     aspectRatio: '1:1',
     isSizeManuallyAdjusted: false,
     sourceFileName: null,
+    model: DEFAULT_IMAGE_MODEL_ID,
   }),
 };
 

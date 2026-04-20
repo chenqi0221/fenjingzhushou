@@ -49,6 +49,7 @@ export interface NodeImageData extends NodeDisplayData {
 
 export interface UploadImageNodeData extends NodeImageData {
   sourceFileName?: string | null;
+  model?: string;
 }
 
 export type ExportImageNodeResultKind =

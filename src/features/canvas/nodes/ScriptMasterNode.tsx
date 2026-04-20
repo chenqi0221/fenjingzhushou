@@ -2,6 +2,7 @@ import {
   memo,
   useState,
   useCallback,
+  useMemo,
 } from 'react';
 import { type NodeProps, Handle, Position } from '@xyflow/react';
 import { Film, Clapperboard } from 'lucide-react';
@@ -39,8 +40,12 @@ import {
   NODE_CONTROL_ICON_CLASS,
   NODE_CONTROL_PRIMARY_BUTTON_CLASS,
 } from '@/features/canvas/ui/nodeControlStyles';
-
-const SCRIPT_MASTER_DEFAULT_MODEL = 'volcano/ep-20260410002744-29gfm';
+import { ModelParamsControls } from '@/features/canvas/ui/ModelParamsControls';
+import {
+  DEFAULT_IMAGE_MODEL_ID,
+  getImageModel,
+  listImageModels,
+} from '@/features/canvas/models';
 
 const DURATION_OPTIONS = [
   { value: '5', label: '5秒' },
@@ -87,7 +92,14 @@ export const ScriptMasterNode = memo(({ id, data, selected, width, height }: Scr
 
   const resolvedTitle = resolveNodeDisplayName(CANVAS_NODE_TYPES.scriptMaster, nodeData);
 
-  const modelId = SCRIPT_MASTER_DEFAULT_MODEL;
+  const imageModels = useMemo(() => listImageModels(), []);
+  const selectedModel = useMemo(() => {
+    const modelId = nodeData.model ?? DEFAULT_IMAGE_MODEL_ID;
+    return getImageModel(modelId);
+  }, [nodeData.model]);
+  const providerApiKey = apiKeys[selectedModel.providerId] ?? '';
+  const selectedModelProviderName = selectedModel.providerId;
+  const modelId = selectedModel.id;
   const duration = nodeData.duration || '10';
 
   const getUpstreamContent = useCallback(() => {
@@ -122,17 +134,17 @@ export const ScriptMasterNode = memo(({ id, data, selected, width, height }: Scr
       return;
     }
 
-    const provider = 'volcano';
-    if (!apiKeys[provider] || !apiKeys[provider]?.trim()) {
+    const provider = selectedModel.providerId;
+    if (!providerApiKey || !providerApiKey.trim()) {
       showErrorDialog(
         t('modelParams.providerKeyRequiredTitle'),
         t('modelParams.providerKeyRequiredTitle'),
-        t('modelParams.providerKeyRequiredDesc', { provider }),
+        t('modelParams.providerKeyRequiredDesc', { provider: selectedModelProviderName }),
       );
       return;
     }
 
-    await ensureApiKey(provider, apiKeys[provider]);
+    await ensureApiKey(provider, providerApiKey);
 
     setIsGenerating(true);
 
@@ -324,6 +336,16 @@ ${contextText}
             ))}
           </UiSelect>
         </div>
+      </div>
+
+      <div className="mb-2 flex items-center gap-1">
+        <ModelParamsControls
+          imageModels={imageModels}
+          selectedModel={selectedModel}
+          onModelChange={(modelId) => {
+            updateNodeData(id, { model: modelId });
+          }}
+        />
       </div>
 
       <UiPanel className="flex-1 p-2 overflow-auto">

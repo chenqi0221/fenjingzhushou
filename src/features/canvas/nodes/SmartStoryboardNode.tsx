@@ -2,6 +2,7 @@ import {
   memo,
   useState,
   useCallback,
+  useMemo,
 } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Brain } from 'lucide-react';
@@ -34,8 +35,12 @@ import {
   NODE_CONTROL_ICON_CLASS,
   NODE_CONTROL_PRIMARY_BUTTON_CLASS,
 } from '@/features/canvas/ui/nodeControlStyles';
-
-const SMART_STORYBOARD_DEFAULT_MODEL = 'volcano/ep-20260410002744-29gfm';
+import { ModelParamsControls } from '@/features/canvas/ui/ModelParamsControls';
+import {
+  DEFAULT_IMAGE_MODEL_ID,
+  getImageModel,
+  listImageModels,
+} from '@/features/canvas/models';
 
 type SmartStoryboardNodeProps = {
   id: string;
@@ -67,8 +72,13 @@ export const SmartStoryboardNode = memo(({ id, data, selected, width, height }: 
 
   const resolvedTitle = resolveNodeDisplayName(CANVAS_NODE_TYPES.smartStoryboard, nodeData);
 
-  // Model hardcoded to Google Gemini
-  const modelId = SMART_STORYBOARD_DEFAULT_MODEL;
+  const imageModels = useMemo(() => listImageModels(), []);
+  const selectedModel = useMemo(() => {
+    const modelId = nodeData.model ?? DEFAULT_IMAGE_MODEL_ID;
+    return getImageModel(modelId);
+  }, [nodeData.model]);
+  const providerApiKey = apiKeys[selectedModel.providerId] ?? '';
+  const modelId = selectedModel.id;
 
   // 递归查找上游节点，直到找到图片或分析结果
   const findUpstreamContent = useCallback((startNodeId: string): { images: string[], analysisResult: string | null } => {
@@ -181,16 +191,12 @@ export const SmartStoryboardNode = memo(({ id, data, selected, width, height }: 
       return;
     }
 
-    // 获取所有配置了API密钥的提供者
-    const availableProviders = Object.entries(apiKeys)
-      .filter(([_, key]) => key && key.trim())
-      .map(([provider]) => provider);
-    
-    if (availableProviders.length === 0) {
+    // 检查选中的模型是否有 API key
+    if (!providerApiKey || !providerApiKey.trim()) {
       showErrorDialog(
         t('modelParams.providerKeyRequiredTitle'),
         t('modelParams.providerKeyRequiredTitle'),
-        t('modelParams.providerKeyRequiredDesc', { provider: '任何可用的' }),
+        t('modelParams.providerKeyRequiredDesc', { provider: selectedModel.providerId }),
       );
       return;
     }
@@ -201,20 +207,12 @@ export const SmartStoryboardNode = memo(({ id, data, selected, width, height }: 
     setIsGenerating(true);
 
     try {
-      // 按优先级顺序尝试提供者
-      const providerPriority = ['volcano', 'ppio', 'volcano-vision'];
-      const providersToTry = providerPriority.filter(p => availableProviders.includes(p));
+      // 使用选中的模型
+      await ensureApiKey(selectedModel.providerId, providerApiKey);
 
-      let lastError: any = null;
+      let result: string;
 
-      for (const provider of providersToTry) {
-        try {
-          // 同步 API key 到后端
-          await ensureApiKey(provider, apiKeys[provider]);
-
-          let result: string;
-
-          if (sourceText) {
+      if (sourceText) {
             // 有上游文字描述，基于它生成分镜框架
             console.log('[SmartStoryboard] Using source text from upstream node, generating storyboard frames');
             const scriptPrompt = `# Role: 故事线拆解型批量分镜提示词专家
@@ -627,28 +625,81 @@ ${sourceAnalysisResult}
             }
           }
 
-          // 成功后直接返回
-          return;
-        } catch (error) {
-          console.error(`使用 ${provider} 进行智能分镜生成失败:`, error);
-          lastError = error;
-          // 继续尝试下一个提供者
-        }
-      }
+          // 更新结果文本
+          updateNodeData(id, {
+            resultText: result,
+            isGenerating: false,
+          });
 
-      // 所有提供者都失败了，显示错误信息
-      if (lastError) {
-        console.error('所有API提供者都失败了:', lastError);
-        const resolvedError = resolveErrorContent(lastError, t('smartStoryboard.generateFailed'));
-        showErrorDialog(resolvedError.message, t('smartStoryboard.generateFailed'), resolvedError.details);
-        updateNodeData(id, {
-          isGenerating: false,
-        });
-      }
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [getSourceText, getSourceAnalysisResult, incomingImages, getTargetStoryboardGen, id, updateNodeData, t, getNode, apiKeys]);
+          // 如果连接了分镜生成节点，自动把提示词填入分镜节点
+          if (targetStoryboard) {
+            // 解析结果 - 从Markdown格式中提取每个Scene的英文提示词
+            const lines = result.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            const prompts: string[] = [];
+            let currentScene = false;
+
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              
+              // 检查是否是Scene标题
+              if (line.startsWith('### Scene')) {
+                currentScene = true;
+              }
+              // 检查是否是英文提示词行
+              else if (currentScene && line.startsWith('- 英文提示词：')) {
+                const prompt = line.replace('- 英文提示词：', '').trim();
+                if (prompt.length > 0) {
+                  prompts.push(prompt);
+                }
+                currentScene = false; // 一个Scene只提取一个英文提示词
+              }
+            }
+
+            // 更新分镜生成节点的 frames
+            // 如果 frames 数组存在（不管长度是否为0），我们都尝试更新
+            if (targetStoryboard.frames) {
+              const updatedFrames = targetStoryboard.frames.map((frame: any, index: number) => {
+                if (index < prompts.length && prompts[index].length > 0) {
+                  return {
+                    ...frame,
+                    description: prompts[index],
+                  };
+                }
+                return frame;
+              });
+
+              // 如果 frames 是空的，根据 gridRows x gridCols 创建空 frames 然后填入 prompts
+              if (updatedFrames.length === 0 && prompts.length > 0) {
+                // 得到正确的行数和列数
+                const targetNode = getNode(targetStoryboard.nodeId);
+                const gridRows = (targetNode?.data as any).gridRows ?? 3;
+                const gridCols = (targetNode?.data as any).gridCols ?? 3;
+                // 创建 frames，每个 frame 填入 prompt
+                for (let i = 0; i < gridRows * gridCols && i < prompts.length; i++) {
+                  updatedFrames.push({
+                    id: `frame-${i}`,
+                    description: prompts[i] ?? '',
+                    referenceIndex: null,
+                  });
+                }
+              }
+
+              updateNodeData(targetStoryboard.nodeId, {
+                frames: updatedFrames,
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`智能分镜生成失败:`, error);
+          const resolvedError = resolveErrorContent(error, t('smartStoryboard.generateFailed'));
+          showErrorDialog(resolvedError.message, t('smartStoryboard.generateFailed'), resolvedError.details);
+          updateNodeData(id, {
+            isGenerating: false,
+          });
+        } finally {
+          setIsGenerating(false);
+        }
+  }, [getSourceText, getSourceAnalysisResult, incomingImages, getTargetStoryboardGen, id, updateNodeData, t, getNode, selectedModel, providerApiKey]);
 
   const resolvedNodeWidth = Math.max(
     SMART_STORYBOARD_MIN_WIDTH,
@@ -699,6 +750,16 @@ ${sourceAnalysisResult}
           className="h-full min-h-[180px] text-sm"
         />
       </UiPanel>
+
+      <div className="mb-2 flex items-center gap-1">
+        <ModelParamsControls
+          imageModels={imageModels}
+          selectedModel={selectedModel}
+          onModelChange={(modelId) => {
+            updateNodeData(id, { model: modelId });
+          }}
+        />
+      </div>
 
       <div className="mt-auto pt-2">
         <UiButton

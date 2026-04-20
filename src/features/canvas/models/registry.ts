@@ -31,11 +31,10 @@ const imageModelMap = new Map<string, ImageModelDefinition>(
   imageModels.map((model) => [model.id, model])
 );
 
-export const DEFAULT_IMAGE_MODEL_ID = 'volcano/ep-20260409234726-bktdp';
+export const DEFAULT_IMAGE_MODEL_ID = 'google/gemini-2.5-flash-image';
 
 const imageModelAliasMap = new Map<string, string>([
-  ['gemini-3.1-flash', 'ppio/gemini-3.1-flash'],
-  ['gemini-3.1-flash-edit', 'ppio/gemini-3.1-flash'],
+  ['gemini-2.5-flash', 'google/gemini-2.5-flash-image'],
 ]);
 
 export function listImageModels(): ImageModelDefinition[] {

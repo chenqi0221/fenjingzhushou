@@ -310,7 +310,7 @@ export const useSettingsStore = create<SettingsState>()(
         return {
           ...(persistedState as object),
           isHydrated: true,
-          apiKeys: state.apiKey ? { ppio: normalizeApiKey(state.apiKey) } : {},
+          apiKeys: state.apiKey ? { google: normalizeApiKey(state.apiKey) } : {},
           ignoreAtTagWhenCopyingAndGenerating,
           grsaiNanoBananaProModel: normalizeGrsaiNanoBananaProModel(
             state.grsaiNanoBananaProModel

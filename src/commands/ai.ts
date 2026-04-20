@@ -291,10 +291,7 @@ export async function listModels(): Promise<string[]> {
     // 在非Tauri环境中返回模拟的模型列表
     console.warn('[AI] Running in non-Tauri environment, returning mock model list');
     return [
-      'volcano/ep-20260409234726-bktdp',
-      'volcano/doubao-seed-2-0-lite-260215',
-      'ppio/gemini-3.1-flash',
-      'volcano-vision/ep-20260409234726-bktdp',
+      'google/gemini-2.5-flash-image',
     ];
   }
   return await invoke('list_models');

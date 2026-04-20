@@ -10,17 +10,10 @@ import { imageUrlToDataUrl, compressImageForAIAnalysis } from '@/features/canvas
 import type { AiGateway, GenerateImagePayload } from '../application/ports';
 
 async function normalizeReferenceImages(payload: GenerateImagePayload): Promise<string[] | undefined> {
-  const needsCompression = payload.providerId === 'volcano' || payload.providerId === 'volcano-vision';
-  
   return payload.referenceImages
     ? await Promise.all(
       payload.referenceImages.map(async (imageUrl) => {
-        let normalized = await imageUrlToDataUrl(imageUrl);
-        
-        if (needsCompression) {
-          normalized = await compressImageForAIAnalysis(normalized);
-        }
-        
+        const normalized = await imageUrlToDataUrl(imageUrl);
         return normalized;
       })
     )

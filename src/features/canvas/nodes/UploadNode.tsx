@@ -45,6 +45,17 @@ import { CanvasNodeImage } from '@/features/canvas/ui/CanvasNodeImage';
 import { useCanvasStore } from '@/stores/canvasStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { showErrorDialog } from '@/features/canvas/application/errorDialog';
+import {
+  DEFAULT_IMAGE_MODEL_ID,
+  getImageModel,
+  listImageModels,
+} from '@/features/canvas/models';
+import {
+  NODE_CONTROL_CHIP_CLASS,
+  NODE_CONTROL_MODEL_CHIP_CLASS,
+  NODE_CONTROL_PARAMS_CHIP_CLASS,
+} from '@/features/canvas/ui/nodeControlStyles';
+import { ModelParamsControls } from '@/features/canvas/ui/ModelParamsControls';
 
 type UploadNodeProps = NodeProps & {
   id: string;
@@ -95,6 +106,16 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
   } | null>(null);
   const [transientPreviewUrl, setTransientPreviewUrl] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // 获取可用的图像模型列表
+  const imageModels = useMemo(() => listImageModels(), []);
+  const selectedModelId = data.model || DEFAULT_IMAGE_MODEL_ID;
+  const selectedModel = useMemo(() => getImageModel(selectedModelId), [selectedModelId]);
+
+  const handleModelChange = useCallback((modelId: string) => {
+    updateNodeData(id, { model: modelId });
+  }, [id, updateNodeData]);
+
   const resolvedAspectRatio = data.aspectRatio || '1:1';
   const compactSize = resolveMinEdgeFittedSize(resolvedAspectRatio, {
     minWidth: EXPORT_RESULT_NODE_MIN_WIDTH,
@@ -292,7 +313,7 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
     const availableProviders = Object.entries(apiKeys)
       .filter(([_, key]) => key && key.trim())
       .map(([provider]) => provider);
-    
+
     if (availableProviders.length === 0) {
       const errorMessage = '请在设置中填写至少一个 API Key';
       void showErrorDialog(errorMessage, '错误');
@@ -303,26 +324,21 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
 
     try {
       // 按优先级顺序尝试提供者
-      const providerPriority = ['volcano', 'ppio', 'volcano-vision'];
+      const providerPriority = ['google'];
       const providersToTry = providerPriority.filter(p => availableProviders.includes(p));
 
       let lastError: any = null;
 
       for (const providerId of providersToTry) {
         const apiKey = apiKeys[providerId]!;
-        
+
         try {
           // 设置API密钥
           console.log('[UploadNode] Setting API key for provider:', providerId, 'key prefix:', apiKey.substring(0, 8));
           await canvasAiGateway.setApiKey(providerId, apiKey);
 
-          // 根据 provider 选择对应的分析模型
-          // volcano-vision 不支持图像分析，需要使用 volcano
-          const analysisModel = providerId === 'volcano' || providerId === 'volcano-vision'
-            ? 'volcano/ep-20260410002744-29gfm'
-            : providerId === 'ppio'
-            ? 'ppio/gemini-3.1-flash'
-            : 'volcano/ep-20260410002744-29gfm';
+          // 使用节点数据中选择的模型进行图像分析
+          const analysisModel = data.model || DEFAULT_IMAGE_MODEL_ID;
 
           console.log('[UploadNode] Starting image analysis with model:', analysisModel, 'provider:', providerId);
 
@@ -371,7 +387,7 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
     } finally {
       setIsAnalyzing(false);
     }
-  }, [id, data.imageUrl, apiKeys, imageAnalysisPrompt, addNode, addEdge, findNodePosition]);
+  }, [id, data.imageUrl, data.model, apiKeys, imageAnalysisPrompt, addNode, addEdge, findNodePosition]);
 
   const handleNodeClick = useCallback(() => {
     setSelectedNode(id);
@@ -403,12 +419,12 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
   return (
     <div
       className={`
-        group relative overflow-visible rounded-[var(--node-radius)] border bg-surface-dark/85 p-0 transition-colors duration-150
+        group relative flex h-full flex-col overflow-visible rounded-[var(--node-radius)] border bg-surface-dark/90 p-2 transition-colors duration-150
         ${selected
           ? 'border-accent shadow-[0_0_0_1px_rgba(59,130,246,0.32)]'
           : 'border-[rgba(15,23,42,0.22)] hover:border-[rgba(15,23,42,0.34)] dark:border-[rgba(255,255,255,0.22)] dark:hover:border-[rgba(255,255,255,0.34)]'}
       `}
-      style={{ width: resolvedWidth, height: resolvedHeight }}
+      style={{ width: `${resolvedWidth}px`, height: `${resolvedHeight}px` }}
       onClick={handleNodeClick}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -437,10 +453,9 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
         }
       />
 
-      {data.imageUrl || transientPreviewUrl ? (
-        <div
-          className="block h-full w-full overflow-hidden rounded-[var(--node-radius)] bg-bg-dark"
-        >
+      {/* 图片显示区域 */}
+      <div className="relative min-h-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.1)] bg-bg-dark/45 overflow-hidden">
+        {data.imageUrl || transientPreviewUrl ? (
           <CanvasNodeImage
             src={imageSource ?? ''}
             viewerSourceUrl={data.imageUrl ? resolveImageDisplayUrl(data.imageUrl) : null}
@@ -448,17 +463,32 @@ export const UploadNode = memo(({ id, data, selected, width, height }: UploadNod
             className="h-full w-full object-contain"
             onLoad={handleImageLoad}
           />
+        ) : (
+          <label className="block h-full w-full cursor-pointer">
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-text-muted/85">
+              <Upload className="h-7 w-7 opacity-60" />
+              <span className="px-3 text-center text-[12px] leading-6">{t('node.upload.hint')}</span>
+            </div>
+          </label>
+        )}
+      </div>
+
+      {/* 模型选择器 */}
+      {data.imageUrl ? (
+        <div className="mt-2 flex shrink-0 items-center gap-1">
+          <ModelParamsControls
+            imageModels={imageModels}
+            selectedModel={selectedModel}
+            onModelChange={handleModelChange}
+            hideResolutionAndRatio={true}
+            triggerSize="sm"
+            chipClassName={NODE_CONTROL_CHIP_CLASS}
+            modelChipClassName={NODE_CONTROL_MODEL_CHIP_CLASS}
+            paramsChipClassName={NODE_CONTROL_PARAMS_CHIP_CLASS}
+          />
         </div>
-      ) : (
-        <label
-          className="block h-full w-full overflow-hidden rounded-[var(--node-radius)] bg-bg-dark"
-        >
-          <div className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 text-text-muted/85">
-            <Upload className="h-7 w-7 opacity-60" />
-            <span className="px-3 text-center text-[12px] leading-6">{t('node.upload.hint')}</span>
-          </div>
-        </label>
-      )}
+      ) : null}
+
       <input
         ref={inputRef}
         type="file"
