@@ -500,31 +500,6 @@ export const ModelParamsControls = memo(({
                 </div>
               </section>
 
-              {/* 诊断信息显示 - 放在最上方 */}
-              <section className="mb-4 border border-yellow-400/30 rounded-lg p-3 bg-yellow-400/5">
-                <div className="mb-2 text-xs font-bold text-yellow-400">
-                  🔍 诊断信息（开发调试用）
-                </div>
-                <div className="text-xs text-white mb-1">
-                  <span className="text-gray-400">选中模型ID:</span> <span className="font-mono text-yellow-200">{selectedModel.id}</span>
-                </div>
-                <div className="text-xs text-white mb-1">
-                  <span className="text-gray-400">选中模型名:</span> {selectedModel.displayName}
-                </div>
-                <div className="text-xs text-white mb-2">
-                  <span className="text-gray-400">模型数量:</span> {providerModels.length}
-                </div>
-                <div className="space-y-1 border-t border-white/10 pt-2">
-                  {providerModels.map((m, i) => (
-                    <div key={m.id} className={`text-[10px] font-mono ${m.id === selectedModel.id ? 'text-yellow-400 font-bold' : 'text-gray-500'}`}>
-                      {m.id === selectedModel.id ? '✓' : ' '} [{i}] {m.displayName}
-                      <br/>
-                      <span className="pl-4 text-[9px] opacity-70">ID: {m.id}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
               <section>
                 <div className="mb-2 text-xs font-medium text-text-muted">
                   {t('modelParams.model')}

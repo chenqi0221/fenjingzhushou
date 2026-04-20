@@ -583,7 +583,17 @@ export const StoryboardGenNode = memo(({ id, data, selected, width, height }: St
   const frameTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const frameHighlightRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const nodeData = data as StoryboardGenNodeData;
+  const nodeData = data as StoryboardGenNodeData | undefined;
+  
+  // 如果 nodeData 不存在，返回空节点
+  if (!nodeData) {
+    return (
+      <div className="p-4 text-sm text-red-400">
+        错误：节点数据未加载
+      </div>
+    );
+  }
+  
   const [frameDescriptionDrafts, setFrameDescriptionDrafts] = useState<Record<string, string>>(() =>
     buildFrameDescriptionDrafts(nodeData.frames)
   );

@@ -31,10 +31,10 @@ const imageModelMap = new Map<string, ImageModelDefinition>(
   imageModels.map((model) => [model.id, model])
 );
 
-export const DEFAULT_IMAGE_MODEL_ID = 'google/gemini-2.5-flash-image';
+export const DEFAULT_IMAGE_MODEL_ID = 'google/gemini-2.5-flash';
 
 const imageModelAliasMap = new Map<string, string>([
-  ['gemini-2.5-flash', 'google/gemini-2.5-flash-image'],
+  ['gemini-2.5-flash', 'google/gemini-2.5-flash'],
 ]);
 
 export function listImageModels(): ImageModelDefinition[] {
