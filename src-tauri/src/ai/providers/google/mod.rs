@@ -211,19 +211,12 @@ impl AIProvider for GoogleProvider {
 
     fn list_models(&self) -> Vec<String> {
         vec![
-            "google/gemini-2.5-flash-image".to_string(),
-            "google/gemini-3.1-flash-image".to_string(),
-            "google/gemini-3-pro-image-preview".to_string(),
-            "google/imagen-4.0-generate-001".to_string(),
-            "google/imagen-4.0-ultra-generate-001".to_string(),
-            "google/imagen-4.0-fast-generate-001".to_string(),
-            "google/gemini-2.5-flash-exp".to_string(),
-            "google/gemini-3.1-flash-lite-preview".to_string(),
-            "google/gemini-3.1-pro-preview".to_string(),
             "google/gemini-2.5-flash".to_string(),
             "google/gemini-2.0-flash".to_string(),
-            "google/gemini-1.5-flash".to_string(),
-            "google/gemini-pro-vision".to_string(),
+            "google/gemini-3.1-flash-lite-preview".to_string(),
+            "google/gemini-3.1-pro-preview".to_string(),
+            "google/gemini-3.1-flash-image".to_string(),
+            "google/gemini-3-pro-image-preview".to_string(),
         ]
     }
 
