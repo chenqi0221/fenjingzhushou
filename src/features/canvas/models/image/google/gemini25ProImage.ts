@@ -1,14 +1,14 @@
 import type { ImageModelDefinition } from '../../types';
 import { createFixedResolutionPricing } from '@/features/canvas/pricing';
 
-export const GOOGLE_GEMINI_3_PRO_IMAGE_MODEL_ID = 'google/gemini-3-pro-image-preview';
+export const GOOGLE_GEMINI_3_PRO_IMAGE_MODEL_ID = 'google/gemini-2.5-pro';
 
 export const imageModel: ImageModelDefinition = {
   id: GOOGLE_GEMINI_3_PRO_IMAGE_MODEL_ID,
   mediaType: 'image',
   displayName: 'Nano Banana Pro',
   providerId: 'google',
-  description: 'Google Gemini 3.1 Pro (Nano Banana Pro) 最高画质图像生成模型，支持 4K 分辨率和精细控制',
+  description: 'Google Gemini 2.5 Pro (Nano Banana Pro) 最高画质图像生成模型，支持 4K 分辨率和精细控制',
   eta: '60s',
   expectedDurationMs: 60000,
   defaultAspectRatio: '1:1',

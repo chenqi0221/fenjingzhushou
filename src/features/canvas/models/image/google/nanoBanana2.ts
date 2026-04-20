@@ -1,14 +1,14 @@
 import type { ImageModelDefinition } from '../../types';
 import { createFixedResolutionPricing } from '@/features/canvas/pricing';
 
-export const GOOGLE_GEMINI_31_FLASH_IMAGE_MODEL_ID = 'google/gemini-3.1-flash-image';
+export const GOOGLE_GEMINI_31_FLASH_IMAGE_MODEL_ID = 'google/gemini-2.5-flash';
 
 export const imageModel: ImageModelDefinition = {
   id: GOOGLE_GEMINI_31_FLASH_IMAGE_MODEL_ID,
   mediaType: 'image',
   displayName: 'Nano Banana 2',
   providerId: 'google',
-  description: 'Google Gemini 3.1 Flash Image (Nano Banana 2) 图像生成模型，比一代更快更真实，支持文生图和图生图',
+  description: 'Google Gemini 2.5 Flash (Nano Banana 2) 图像生成模型，比一代更快更真实，支持文生图和图生图',
   eta: '10s',
   expectedDurationMs: 10000,
   defaultAspectRatio: '1:1',
@@ -23,14 +23,12 @@ export const imageModel: ImageModelDefinition = {
   resolutions: [
     { value: '1K', label: '1K' },
     { value: '2K', label: '2K' },
-    { value: '4K', label: '4K' },
   ],
   pricing: createFixedResolutionPricing({
     currency: 'CNY',
     standardRates: {
       '1K': 0.08,
       '2K': 0.12,
-      '4K': 0.18,
     },
   }),
   resolveRequest: ({ referenceImageCount }) => ({

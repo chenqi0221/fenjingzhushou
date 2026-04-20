@@ -189,7 +189,9 @@ function canNodeTypeBeManualConnectionSource(type: CanvasNodeType): boolean {
     || type === CANVAS_NODE_TYPES.exportImage
     || type === CANVAS_NODE_TYPES.smartStoryboard
     || type === CANVAS_NODE_TYPES.storyboardGen
-    || type === CANVAS_NODE_TYPES.scriptMaster;
+    || type === CANVAS_NODE_TYPES.scriptMaster
+    || type === CANVAS_NODE_TYPES.storyboardSplit
+    || type === CANVAS_NODE_TYPES.imageEdit;
 }
 
 function canNodeBeManualConnectionSource(nodeId: string | null | undefined, nodes: CanvasNode[]): boolean {

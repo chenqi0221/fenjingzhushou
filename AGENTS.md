@@ -1,5 +1,71 @@
 # AGENTS.md
 
+> **⚠️ 云端使用注意**：如果你通过 Claude Web、Cursor Chat 或其他云端界面访问本项目，**请先将本文件完整内容粘贴到对话开头**，以确保 AI 遵循项目规范。本地 IDE（如 Trae）会自动读取本文件。
+
+---
+
+## 0. AI 行为准则（CLAUDE.md 合并版）
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+### 0.1 Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 0.2 Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 0.3 Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+### 0.4 Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
 ## 1. 项目目标与技术栈
 
 - 产品目标：基于节点画布进行图片上传、AI 生成/编辑、工具处理（裁剪/标注/分镜）。
@@ -72,7 +138,7 @@
 
 2. 沿着数据流改动
 - UI 输入 -> Store -> 应用服务 -> 基础设施（命令/API）-> 持久化。
-- 禁止跨层“偷改”状态；尽量只在对应层处理对应职责。
+- 禁止跨层"偷改"状态；尽量只在对应层处理对应职责。
 
 3. 小步提交与即时验证
 - 每次改动后做轻量检查（见第 6 节），通过后再继续。
@@ -81,7 +147,7 @@
 - 在功能收尾或大改合并前运行完整构建。
 
 5. 发布快捷口令
-- 当用户明确说“推送更新”时，默认执行一次补丁版本发布：基于上一个 release/tag 自动递增 patch 版本号，汇总代码变动生成 Markdown 更新日志，完成版本同步、发布提交、annotated tag 与远端推送；如用户额外指定 minor/major 或自定义说明，则按用户要求覆盖默认行为。
+- 当用户明确说"推送更新"时，默认执行一次补丁版本发布：基于上一个 release/tag 自动递增 patch 版本号，汇总代码变动生成 Markdown 更新日志，完成版本同步、发布提交、annotated tag 与远端推送；如用户额外指定 minor/major 或自定义说明，则按用户要求覆盖默认行为。
 - 自动生成的更新日志正文只保留 `## 新增`、`## 优化`、`## 修复` 等二级标题分组与对应列表项；不要额外输出 `# vx.y.z` 标题、`基于某个 tag 之后的若干提交整理` 说明或 `## 完整提交` 区块，空分组可省略。
 
 ## 4. 架构与解耦标准
@@ -110,7 +176,7 @@
 
 ### 4.6 文档边界
 
-- 本文档定位为“技术开发规范文档”，优先记录稳定的架构约束、分层规则、扩展流程、验证标准。
+- 本文档定位为"技术开发规范文档"，优先记录稳定的架构约束、分层规则、扩展流程、验证标准。
 - 不记录易变的具体 UI 操作步骤、临时交互文案或产品走查细节（这些应放在需求文档/设计稿/任务说明中）。
 - 当实现变化仅影响交互细节而不影响技术约束时，可不更新本文档。
 
@@ -119,7 +185,7 @@
 - 节点类型、默认数据、菜单展示、连线能力统一在 `domain/nodeRegistry.ts` 声明，不在 `Canvas.tsx` / `canvasStore.ts` 重复硬编码。
 - `connectivity` 为连线能力配置源：
   - `sourceHandle` / `targetHandle`：是否具备输入输出端口。
-  - `connectMenu.fromSource` / `connectMenu.fromTarget`：从输出端或输入端拉线时，是否允许出现在“创建节点菜单”。
+  - `connectMenu.fromSource` / `connectMenu.fromTarget`：从输出端或输入端拉线时，是否允许出现在"创建节点菜单"。
 - 菜单候选节点必须由注册表函数统一推导（如 `getConnectMenuNodeTypes`），禁止在 UI 层手写类型白名单。
 - 内部衍生节点（如切割结果 `storyboardSplit`、导出节点）默认 `connectMenu` 关闭，只能由应用流程自动创建。
 
@@ -131,7 +197,7 @@
 - 节点底部控制条（模型/比例/生成/导出等）尺寸样式统一从 `src/features/canvas/ui/nodeControlStyles.ts` 引用，禁止在各节点散落硬编码一套新尺寸。
 - 节点工具条（NodeToolbar）位置、对齐、偏移统一从 `src/features/canvas/ui/nodeToolbarConfig.ts` 引用；禁止通过 `left/translate` 等绝对定位覆盖跟随逻辑。
 - 选中覆盖层 `SelectedNodeOverlay` 只承载轻量通用覆盖能力（如工具条），节点核心业务输入区应内聚到节点组件本体（例如 `ImageEditNode`）。
-- 对话框支持“打开/关闭”过渡，避免突兀闪烁。
+- 对话框支持"打开/关闭"过渡，避免突兀闪烁。
 - 明暗主题要可读，避免高饱和蓝色抢占焦点（导航图已优化为灰黑系）。
 - 快捷键应避开输入态（`input/textarea/contentEditable`）避免误触。
 
@@ -173,7 +239,7 @@ npm run release -- patch --notes-file docs/releases/v0.1.12.md
 说明：
 - 日常迭代不要求每次都完整打包，先走 `tsc --noEmit` + 关键路径手测。
 - 影响打包、依赖、入口、持久化、Tauri 命令时，再执行完整构建。
-- 发布说明优先落到 `docs/releases/vx.y.z.md`，再通过 `npm run release` 或“推送更新”口令触发发布。
+- 发布说明优先落到 `docs/releases/vx.y.z.md`，再通过 `npm run release` 或"推送更新"口令触发发布。
 - `docs/releases/vx.y.z.md` 的默认格式同样只保留二级标题分组和列表正文，不写额外总标题、范围说明和完整提交清单。
 
 ## 7. 性能实践
@@ -185,7 +251,7 @@ npm run release -- patch --notes-file docs/releases/v0.1.12.md
 - viewport 持久化走独立轻量队列与独立命令（`update_project_viewport_record`），不要回退到整项目 upsert。
 - 视口更新要做归一化与阈值比较（epsilon），过滤微小抖动写入。
 - 优先使用 `useMemo/useCallback` 控制重渲染；避免把大对象直接塞进依赖导致抖动。
-- 画布交互优先“流畅”而非“实时全量持久化”，可使用短延迟合并保存。
+- 画布交互优先"流畅"而非"实时全量持久化"，可使用短延迟合并保存。
 
 ## 8. 模型与工具扩展规范
 

@@ -87,7 +87,7 @@ const imageEditNodeDefinition: CanvasNodeDefinition<ImageEditNodeData> = {
     targetHandle: true,
     connectMenu: {
       fromSource: true,
-      fromTarget: false,
+      fromTarget: true,
     },
   },
   createDefaultData: () => ({
@@ -193,8 +193,8 @@ const storyboardSplitDefinition: CanvasNodeDefinition<StoryboardSplitNodeData> =
     sourceHandle: true,
     targetHandle: true,
     connectMenu: {
-      fromSource: false,
-      fromTarget: false,
+      fromSource: true,
+      fromTarget: true,
     },
   },
   createDefaultData: () => ({
