@@ -89,6 +89,7 @@
       "uploadImage": "Upload Image",
       "aiImageGeneration": "AI Image",
       "storyboard": "Storyboard Node",
+      "storyboardSplit": "Split Result",
       "storyboardGen": "Storyboard Generation",
       "smartStoryboard": "Smart Storyboard",
       "scriptMaster": "Script Master",

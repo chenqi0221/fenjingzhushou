@@ -4,6 +4,7 @@ import {
   isSmartStoryboardNode,
   isScriptMasterNode,
   isUploadNode,
+  isStoryboardSplitNode,
   type CanvasEdge,
   type CanvasNode,
 } from '../domain/canvasNodes';
@@ -38,6 +39,13 @@ export class DefaultGraphImageResolver implements GraphImageResolver {
 
     if (isUploadNode(node) || isImageEditNode(node) || isExportImageNode(node)) {
       return node.data.imageUrl ? [node.data.imageUrl] : [];
+    }
+
+    if (isStoryboardSplitNode(node)) {
+      const images = node.data.frames
+        .map((frame) => frame.imageUrl)
+        .filter((url): url is string => url !== null && url !== undefined);
+      return images;
     }
 
     if (isSmartStoryboardNode(node) || isScriptMasterNode(node)) {

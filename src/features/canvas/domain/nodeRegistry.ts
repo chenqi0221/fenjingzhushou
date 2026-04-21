@@ -182,7 +182,7 @@ const textAnnotationNodeDefinition: CanvasNodeDefinition<TextAnnotationNodeData>
 
 const storyboardSplitDefinition: CanvasNodeDefinition<StoryboardSplitNodeData> = {
   type: CANVAS_NODE_TYPES.storyboardSplit,
-  menuLabelKey: 'node.menu.storyboard',
+  menuLabelKey: 'node.menu.storyboardSplit',
   menuIcon: 'layout',
   visibleInMenu: false,
   capabilities: {

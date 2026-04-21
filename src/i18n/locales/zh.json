@@ -89,6 +89,7 @@
       "uploadImage": "上传图片",
       "aiImageGeneration": "AI 图片",
       "storyboard": "分节点",
+      "storyboardSplit": "切割结果",
       "storyboardGen": "分镜生成",
       "smartStoryboard": "智能分镜",
       "scriptMaster": "编剧大师",
