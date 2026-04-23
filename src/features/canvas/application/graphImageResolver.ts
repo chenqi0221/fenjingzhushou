@@ -17,7 +17,8 @@ export class DefaultGraphImageResolver implements GraphImageResolver {
 
     const sourceNodeIds = edges
       .filter((edge) => edge.target === nodeId)
-      .map((edge) => edge.source);
+      .map((edge) => edge.source)
+      .sort(); // 按节点 ID 排序，确保顺序稳定
 
     for (const sourceId of sourceNodeIds) {
       const sourceNode = nodeById.get(sourceId);
@@ -25,7 +26,15 @@ export class DefaultGraphImageResolver implements GraphImageResolver {
       allImages.push(...images);
     }
 
-    return [...new Set(allImages)];
+    // 去重但保持顺序
+    const seen = new Set<string>();
+    return allImages.filter((image) => {
+      if (seen.has(image)) {
+        return false;
+      }
+      seen.add(image);
+      return true;
+    });
   }
 
   private extractImages(

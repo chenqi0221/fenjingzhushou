@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, FolderOpen, Pencil, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Pencil, Trash2, FlaskConical } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { getConfiguredApiKeyCount, useSettingsStore } from '@/stores/settingsStore';
 import { UI_CONTENT_OVERLAY_INSET_CLASS } from '@/components/ui/motion';
@@ -102,10 +102,29 @@ export function ProjectManager() {
               </UiSelect>
             </div>
           </div>
-          <UiButton type="button" variant="primary" onClick={handleCreateProject} className="gap-2">
-            <Plus className="w-5 h-5" />
-            {t('project.newProject')}
-          </UiButton>
+          <div className="flex gap-2">
+            <UiButton 
+              type="button" 
+              variant="muted" 
+              onClick={() => {
+                console.log('[ProjectManager] Resolution test button clicked');
+                // 创建自定义事件来切换到测试模式
+                const event = new CustomEvent('enterTestMode', {
+                  detail: { type: 'resolution' }
+                });
+                console.log('[ProjectManager] Dispatching enterTestMode event');
+                window.dispatchEvent(event);
+              }}
+              className="gap-2"
+            >
+              <FlaskConical className="w-5 h-5" />
+              分辨率测试
+            </UiButton>
+            <UiButton type="button" variant="primary" onClick={handleCreateProject} className="gap-2">
+              <Plus className="w-5 h-5" />
+              {t('project.newProject')}
+            </UiButton>
+          </div>
         </div>
 
         {configuredApiKeyCount === 0 && <MissingApiKeyHint className="mb-8" />}

@@ -52,6 +52,16 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
   const updateNodeData = useCanvasStore((state) => state.updateNodeData);
   const { zoom } = useViewport();
   const [now, setNow] = useState(() => Date.now());
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = event.currentTarget;
+    console.log(`[ImageNode] Image loaded via onLoad: ${img.naturalWidth}x${img.naturalHeight}`);
+    setImageDimensions({ 
+      width: img.naturalWidth, 
+      height: img.naturalHeight 
+    });
+  };
   const isExportResultNode = type === CANVAS_NODE_TYPES.exportImage;
   const isGenerating = typeof data.isGenerating === 'boolean' ? data.isGenerating : false;
   const generationError =
@@ -81,6 +91,73 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
     () => resolveNodeDisplayName(type as CanvasNodeType, data),
     [data, type]
   );
+
+  // 加载图片获取实际尺寸
+  useEffect(() => {
+    console.log(`[ImageNode] useEffect triggered for ${id}`);
+    console.log(`[ImageNode] imageUrl: ${data.imageUrl?.substring(0, 50)}...`);
+    console.log(`[ImageNode] previewImageUrl: ${data.previewImageUrl?.substring(0, 50)}...`);
+    
+    let cancelled = false;
+
+    const loadImageDimensions = () => {
+      if (!data.imageUrl && !data.previewImageUrl) {
+        console.log(`[ImageNode] No image URL available`);
+        if (!cancelled) {
+          setImageDimensions(null);
+        }
+        return;
+      }
+
+      // 使用与imageSource相同的逻辑
+      const picked = data.imageUrl || data.previewImageUrl;
+      if (!picked) {
+        console.log(`[ImageNode] No picked URL`);
+        if (!cancelled) {
+          setImageDimensions(null);
+        }
+        return;
+      }
+      
+      const resolvedUrl = resolveImageDisplayUrl(picked);
+      
+      console.log(`[ImageNode] Loading image for dimensions: ${picked.substring(0, 100)}...`);
+      console.log(`[ImageNode] Resolved URL: ${resolvedUrl.substring(0, 100)}...`);
+      
+      // 尝试直接使用浏览器的Image对象
+      const img = new Image();
+      
+      // 处理跨域
+      if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+        img.crossOrigin = 'anonymous';
+      }
+      
+      img.onload = () => {
+        console.log(`[ImageNode] Image loaded: ${img.width}x${img.height}`);
+        if (!cancelled) {
+          setImageDimensions({ 
+            width: img.width, 
+            height: img.height 
+          });
+        }
+      };
+      
+      img.onerror = () => {
+        console.error(`[ImageNode] Image load failed: ${resolvedUrl.substring(0, 100)}...`);
+        if (!cancelled) {
+          setImageDimensions(null);
+        }
+      };
+      
+      img.src = resolvedUrl;
+    };
+
+    loadImageDimensions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.imageUrl, data.previewImageUrl, id]);
 
   useEffect(() => {
     updateNodeInternals(id);
@@ -177,12 +254,20 @@ export const ImageNode = memo(({ id, data, selected, type, width, height }: Imag
         className={`relative h-full w-full overflow-hidden rounded-[var(--node-radius)] ${hasGenerationError ? 'bg-[rgba(127,29,29,0.2)]' : 'bg-bg-dark'}`}
       >
         {data.imageUrl ? (
-          <CanvasNodeImage
-            src={imageSource ?? ''}
-            alt={isExportResultNode ? t('node.imageNode.resultAlt') : t('node.imageNode.generatedAlt')}
-            viewerSourceUrl={originalImageUrl}
-            className="h-full w-full object-contain"
-          />
+          <>
+            <CanvasNodeImage
+              src={imageSource ?? ''}
+              alt={isExportResultNode ? t('node.imageNode.resultAlt') : t('node.imageNode.generatedAlt')}
+              viewerSourceUrl={originalImageUrl}
+              className="h-full w-full object-contain"
+              onLoad={handleImageLoad}
+            />
+            {imageDimensions && (
+              <div className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white/90 font-mono">
+                {imageDimensions.width}×{imageDimensions.height}
+              </div>
+            )}
+          </>
         ) : hasGenerationError ? (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-red-300">
             <AlertTriangle className="h-7 w-7 opacity-90" />

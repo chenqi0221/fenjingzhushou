@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { invoke } from '@tauri-apps/api/core';
 import { Canvas } from './features/canvas/Canvas';
+import { ResolutionTest } from './features/canvas/components/ResolutionTest';
 import { TitleBar } from './components/TitleBar';
 import { SettingsDialog } from './components/SettingsDialog';
 import { UpdateAvailableDialog, type UpdateIgnoreMode } from './components/UpdateAvailableDialog';
@@ -49,6 +50,8 @@ function App() {
   const [latestVersion, setLatestVersion] = useState<string>('');
   const [currentVersion, setCurrentVersion] = useState<string>('');
   const [globalError, setGlobalError] = useState<GlobalErrorDialogDetail | null>(null);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [testType, setTestType] = useState<string | null>(null);
 
   const isHydrated = useProjectStore((state) => state.isHydrated);
   const hydrate = useProjectStore((state) => state.hydrate);
@@ -75,6 +78,41 @@ function App() {
       typeof navigator !== 'undefined'
       && /(Mac|iPhone|iPad|iPod)/i.test(`${navigator.platform} ${navigator.userAgent}`);
     root.dataset.platform = isMac ? 'macos' : 'default';
+  }, []);
+
+  useEffect(() => {
+    // 检测URL参数是否包含测试模式
+    if (typeof window !== 'undefined' && window.location) {
+      const params = new URLSearchParams(window.location.search);
+      const testParam = params.get('test');
+      if (testParam) {
+        setIsTestMode(true);
+        setTestType(testParam);
+        // 清理URL参数，避免刷新时重新进入测试模式
+        const newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, []);
+
+  // 监听自定义事件来切换到测试模式
+  useEffect(() => {
+    const handleEnterTestMode = (event: Event) => {
+      console.log('[App] enterTestMode event received', event);
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.type) {
+        console.log('[App] Setting test mode:', customEvent.detail.type);
+        setIsTestMode(true);
+        setTestType(customEvent.detail.type);
+      }
+    };
+
+    console.log('[App] Adding enterTestMode event listener');
+    window.addEventListener('enterTestMode', handleEnterTestMode);
+    return () => {
+      console.log('[App] Removing enterTestMode event listener');
+      window.removeEventListener('enterTestMode', handleEnterTestMode);
+    };
   }, []);
 
   useEffect(() => {
@@ -198,7 +236,7 @@ function App() {
     suppressUpdateVersion(latestVersion, mode === 'today-version' ? 'today' : 'forever');
   };
 
-  if (!isHydrated) {
+  if (!isHydrated && !isTestMode) {
     return (
       <ReactFlowProvider>
         <div className="w-full h-full bg-bg-dark" />
@@ -206,6 +244,42 @@ function App() {
     );
   }
 
+  // 测试模式
+  if (isTestMode) {
+    return (
+      <ReactFlowProvider>
+        <div className="w-full h-full flex flex-col bg-bg-dark">
+          <TitleBar
+            onSettingsClick={() => {
+              setSettingsInitialCategory('general');
+              setShowSettings(true);
+            }}
+            showBackButton={false}
+            onBackClick={closeProject}
+          />
+          <main className="flex-1 overflow-auto p-4">
+            {testType === 'resolution' && <ResolutionTest onExit={() => setIsTestMode(false)} />}
+          </main>
+          <SettingsDialog
+            isOpen={showSettings}
+            onClose={() => setShowSettings(false)}
+            initialCategory={settingsInitialCategory}
+            onCheckUpdate={handleManualCheckUpdate}
+          />
+          <GlobalErrorDialog
+            isOpen={Boolean(globalError)}
+            title={globalError?.title ?? ''}
+            message={globalError?.message ?? ''}
+            details={globalError?.details}
+            copyText={globalError?.copyText}
+            onClose={() => setGlobalError(null)}
+          />
+        </div>
+      </ReactFlowProvider>
+    );
+  }
+
+  // 正常模式
   return (
     <ReactFlowProvider>
       <div className="w-full h-full flex flex-col bg-bg-dark">

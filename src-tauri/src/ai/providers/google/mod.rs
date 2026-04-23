@@ -265,13 +265,21 @@ impl AIProvider for GoogleProvider {
         
         let is_imagen_model = model.starts_with("imagen-");
         
-        let (width, height) = match request.size.as_str() {
-            "1024x1024" | "1:1" => (1024, 1024),
-            "768x1024" | "3:4" => (768, 1024),
-            "1024x768" | "4:3" => (1024, 768),
-            "1024x1792" | "9:16" => (1024, 1792),
-            "1792x1024" | "16:9" => (1792, 1024),
-            _ => (1024, 1024),
+        let base_size = match request.size.as_str() {
+            "1K" => 1024,
+            "2K" => 2048,
+            "4K" => 4096,
+            _ => 1024,
+        };
+        
+        let (width, height) = match request.aspect_ratio.as_str() {
+            "1:1" => (base_size, base_size),
+            "3:4" => (base_size * 3 / 4, base_size),
+            "4:3" => (base_size, base_size * 3 / 4),
+            "9:16" => (base_size * 9 / 16, base_size),
+            "16:9" => (base_size, base_size * 9 / 16),
+            "21:9" => (base_size * 21 / 9, base_size),
+            _ => (base_size, base_size),
         };
         
         if is_imagen_model {
@@ -414,9 +422,23 @@ impl AIProvider for GoogleProvider {
                 "parts": parts
             }));
 
-            let generation_config = serde_json::json!({
+            let mut generation_config = serde_json::json!({
                 "responseModalities": ["TEXT", "IMAGE"]
             });
+            
+            if !request.aspect_ratio.is_empty() || !request.size.is_empty() {
+                let mut image_config = serde_json::json!({});
+                
+                if !request.aspect_ratio.is_empty() {
+                    image_config["aspectRatio"] = request.aspect_ratio.clone().into();
+                }
+                
+                if !request.size.is_empty() {
+                    image_config["imageSize"] = request.size.clone().into();
+                }
+                
+                generation_config["imageConfig"] = image_config;
+            }
             
             let request_body = serde_json::json!({
                 "contents": contents,

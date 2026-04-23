@@ -24,7 +24,15 @@ export function TitleBar({ onSettingsClick, showBackButton, onBackClick }: Title
   const { theme, toggleTheme } = useThemeStore();
   const currentProjectName = useProjectStore((state) => state.currentProject?.name);
 
+  console.log('[TitleBar] Initializing...');
+  console.log('[TitleBar] isTauri():', isTauri());
+  
   const appWindow = isTauri() ? getCurrentWindow() : null;
+  
+  console.log('[TitleBar] appWindow:', appWindow);
+  console.log('[TitleBar] isTauri():', isTauri());
+  console.log('[TitleBar] getCurrentWindow():', typeof getCurrentWindow);
+  
   const isZh = i18n.language.startsWith('zh');
   const isMac =
     typeof navigator !== 'undefined'
@@ -33,25 +41,54 @@ export function TitleBar({ onSettingsClick, showBackButton, onBackClick }: Title
   const titleText = currentProjectName ? `${currentProjectName} - ${appTitle}` : appTitle;
 
   const handleMinimize = useCallback(async () => {
+    console.log('[TitleBar] handleMinimize called, appWindow:', appWindow);
     if (appWindow) {
-      await appWindow.minimize();
+      try {
+        console.log('[TitleBar] Calling minimize()...');
+        await appWindow.minimize();
+        console.log('[TitleBar] minimize() called successfully');
+      } catch (error) {
+        console.error('[TitleBar] Error calling minimize():', error);
+      }
+    } else {
+      console.warn('[TitleBar] appWindow is null, not in Tauri environment');
     }
   }, [appWindow]);
 
   const handleMaximize = useCallback(async () => {
+    console.log('[TitleBar] handleMaximize called, appWindow:', appWindow);
     if (appWindow) {
-      const isMaximized = await appWindow.isMaximized();
-      if (isMaximized) {
-        await appWindow.unmaximize();
-      } else {
-        await appWindow.maximize();
+      try {
+        const isMaximized = await appWindow.isMaximized();
+        console.log('[TitleBar] Current isMaximized:', isMaximized);
+        if (isMaximized) {
+          console.log('[TitleBar] Calling unmaximize()...');
+          await appWindow.unmaximize();
+        } else {
+          console.log('[TitleBar] Calling maximize()...');
+          await appWindow.maximize();
+        }
+        console.log('[TitleBar] maximize/unmaximize called successfully');
+      } catch (error) {
+        console.error('[TitleBar] Error calling maximize/unmaximize():', error);
       }
+    } else {
+      console.warn('[TitleBar] appWindow is null, not in Tauri environment');
     }
   }, [appWindow]);
 
   const handleClose = useCallback(async () => {
+    console.log('[TitleBar] handleClose called, appWindow:', appWindow);
     if (appWindow) {
-      await appWindow.close();
+      try {
+        console.log('[TitleBar] Calling close()...');
+        await appWindow.close();
+        console.log('[TitleBar] close() called successfully');
+      } catch (error) {
+        console.error('[TitleBar] Error calling close():', error);
+      }
+    } else {
+      console.warn('[TitleBar] appWindow is null, not in Tauri environment');
     }
   }, [appWindow]);
 
@@ -81,10 +118,16 @@ export function TitleBar({ onSettingsClick, showBackButton, onBackClick }: Title
           <button
             type="button"
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={handleClose}
+            onClick={(e) => {
+              console.log('[TitleBar] Mac Close button clicked, e:', e);
+              e.preventDefault();
+              e.stopPropagation();
+              handleClose();
+            }}
             className="relative flex h-3 w-3 items-center justify-center"
             title={t('titleBar.close')}
             aria-label={t('titleBar.close')}
+            style={{ zIndex: 1000, position: 'relative' }}
           >
             <img src={closeNormalIcon} alt="" className="h-3 w-3 pointer-events-none opacity-100 transition-opacity group-hover:opacity-0" />
             <img src={closeHoverIcon} alt="" className="absolute h-3 w-3 pointer-events-none opacity-0 transition-opacity group-hover:opacity-100" />
@@ -92,10 +135,16 @@ export function TitleBar({ onSettingsClick, showBackButton, onBackClick }: Title
           <button
             type="button"
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={handleMinimize}
+            onClick={(e) => {
+              console.log('[TitleBar] Mac Minimize button clicked, e:', e);
+              e.preventDefault();
+              e.stopPropagation();
+              handleMinimize();
+            }}
             className="relative flex h-3 w-3 items-center justify-center"
             title={t('titleBar.minimize')}
             aria-label={t('titleBar.minimize')}
+            style={{ zIndex: 1000, position: 'relative' }}
           >
             <img src={minimizeNormalIcon} alt="" className="h-3 w-3 pointer-events-none opacity-100 transition-opacity group-hover:opacity-0" />
             <img src={minimizeHoverIcon} alt="" className="absolute h-3 w-3 pointer-events-none opacity-0 transition-opacity group-hover:opacity-100" />
@@ -103,10 +152,16 @@ export function TitleBar({ onSettingsClick, showBackButton, onBackClick }: Title
           <button
             type="button"
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={handleMaximize}
+            onClick={(e) => {
+              console.log('[TitleBar] Mac Maximize button clicked, e:', e);
+              e.preventDefault();
+              e.stopPropagation();
+              handleMaximize();
+            }}
             className="relative flex h-3 w-3 items-center justify-center"
             title={t('titleBar.maximize')}
             aria-label={t('titleBar.maximize')}
+            style={{ zIndex: 1000, position: 'relative' }}
           >
             <img src={maximizeNormalIcon} alt="" className="h-3 w-3 pointer-events-none opacity-100 transition-opacity group-hover:opacity-0" />
             <img src={maximizeHoverIcon} alt="" className="absolute h-3 w-3 pointer-events-none opacity-0 transition-opacity group-hover:opacity-100" />
@@ -180,27 +235,45 @@ export function TitleBar({ onSettingsClick, showBackButton, onBackClick }: Title
 
             <button
               type="button"
-              onClick={handleMinimize}
+              onClick={(e) => {
+                console.log('[TitleBar] Minimize button clicked, e:', e);
+                e.preventDefault();
+                e.stopPropagation();
+                handleMinimize();
+              }}
               className="h-full px-3 hover:bg-bg-dark transition-colors"
               title={t('titleBar.minimize')}
+              style={{ zIndex: 1000, position: 'relative' }}
             >
               <Minus className="w-4 h-4 text-text-muted hover:text-text-dark" />
             </button>
 
             <button
               type="button"
-              onClick={handleMaximize}
+              onClick={(e) => {
+                console.log('[TitleBar] Maximize button clicked, e:', e);
+                e.preventDefault();
+                e.stopPropagation();
+                handleMaximize();
+              }}
               className="h-full px-3 hover:bg-bg-dark transition-colors"
               title={t('titleBar.maximize')}
+              style={{ zIndex: 1000, position: 'relative' }}
             >
               <Maximize2 className="w-4 h-4 text-text-muted hover:text-text-dark" />
             </button>
 
             <button
               type="button"
-              onClick={handleClose}
+              onClick={(e) => {
+                console.log('[TitleBar] Close button clicked, e:', e);
+                e.preventDefault();
+                e.stopPropagation();
+                handleClose();
+              }}
               className="h-full px-3 hover:bg-red-500 transition-colors group"
               title={t('titleBar.close')}
+              style={{ zIndex: 1000, position: 'relative' }}
             >
               <X className="w-4 h-4 text-text-muted group-hover:text-white" />
             </button>

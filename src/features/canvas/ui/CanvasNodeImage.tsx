@@ -33,6 +33,7 @@ export const CanvasNodeImage = memo(({
   viewerImageList,
   disableViewer = false,
   onDoubleClick,
+  onLoad,
   src,
   ...props
 }: CanvasNodeImageProps) => {
@@ -68,6 +69,13 @@ export const CanvasNodeImage = memo(({
           : undefined
       }
       onDoubleClick={handleDoubleClick}
+      onLoad={(e) => {
+        console.log('[CanvasNodeImage] onLoad triggered');
+        console.log('[CanvasNodeImage] src:', src);
+        console.log('[CanvasNodeImage] naturalWidth:', e.currentTarget.naturalWidth);
+        console.log('[CanvasNodeImage] naturalHeight:', e.currentTarget.naturalHeight);
+        onLoad?.(e);
+      }}
     />
   );
 });
